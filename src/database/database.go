@@ -22,7 +22,8 @@ func InitDB() {
 		id TEXT PRIMARY KEY,
 		title TEXT,
 		publish_date DATETIME,
-		snapshot_id TEXT
+		snapshot_id TEXT,
+		FOREIGN KEY (snapshot_id) REFERENCES snapshot(snapshot_id)
 	);
 	CREATE TABLE IF NOT EXISTS snapshot (
 		snapshot_id TEXT PRIMARY KEY,
