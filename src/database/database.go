@@ -2,7 +2,7 @@ package database
 
 import (
 	"database/sql"
-	"go-blogger/src/genrandom"
+	"go-blogger/src/utils"
 	"log"
 	"time"
 
@@ -94,7 +94,7 @@ func GetFileByName(name string) []byte {
 
 func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte) []byte {
 	time := time.Now()
-	id := genrandom.GenerateRandomBytes(8)
+	id := utils.GenerateRandomBytes(8)
 
 	_, err := db.Exec("INSERT INTO snapshot(snapshot_id, page_file, creation_date, blog_id) VALUES(?, ?, ?, ?)", id, pageFileHash, time, blogId)
 	if err != nil {
@@ -113,7 +113,7 @@ func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte
 
 func CreateBlog(title string, pageFileHash []byte, otherFileHashes [][]byte) string {
 	time := time.Now()
-	id := genrandom.GenerateRandomString(6)
+	id := utils.GenerateRandomString(6)
 
 	_, err := db.Exec("INSERT INTO blogs(id, title, publish_date) VALUES(?, ?, ?)", id, title, time)
 	if err != nil {

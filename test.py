@@ -14,8 +14,8 @@ def create_blog(title, page_hash, file_hashes = []):
 
     return requests.post(url, json=data, headers=headers)
 
-response = upload("dish.md", "test.md")
-response = create_blog("My Favourite Dish", response.json().get("hash"))
+response = upload("go.png", "gopher.png")
+#response = create_blog("My Favourite Dish", response.json().get("hash"))
 
 
 if response.status_code == 200:

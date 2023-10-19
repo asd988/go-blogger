@@ -1,4 +1,4 @@
-package genrandom
+package utils
 
 import (
 	"crypto/rand"
