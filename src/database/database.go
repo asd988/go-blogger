@@ -5,6 +5,8 @@ import (
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	"crypto/sha256"
 )
 
 var db *sql.DB
@@ -35,7 +37,7 @@ func InitDB() {
 	);
 	CREATE TABLE IF NOT EXISTS file (
 		hash BLOB PRIMARY KEY,
-		extension TEXT,
+		name TEXT,
 		data BLOB
 	);	
 	CREATE TABLE IF NOT EXISTS snapshot_file (
@@ -50,4 +52,27 @@ func InitDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func StoreFile(name string, data []byte) []byte {
+	hasher := sha256.New()
+	hasher.Write(data)
+	hash := hasher.Sum(nil)
+
+	// Check if the file already exists
+	var fileHash []byte
+	err := db.QueryRow("SELECT hash FROM file WHERE hash = ?", hash).Scan(&fileHash)
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+
+	if fileHash == nil {
+		_, err := db.Exec("INSERT INTO file(hash, name, data) VALUES(?, ?, ?)", hash, name, data)
+		if err != nil {
+			log.Fatal(err)
+		}
+		println("Stored new file")
+	}
+
+	return hash
 }
