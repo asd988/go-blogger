@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather&family=Poppins&display=swap');
+
+:root {
+    --text: #dddddd;
+    --background: #333;
+    --blog-font: 'Poppins', serif;
+}
+/* sans-serif: Poppins */
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: var(--blog-font);
+}
