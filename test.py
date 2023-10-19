@@ -1,14 +1,14 @@
 import requests
-
-url = 'http://localhost:8080/upload'
-#data = {'key1': 'value1', 'key2': 'value2'}
-files = {'file': ('example.txt', open('test.md', 'rb'))}
-
-# read file "secret"
 secret = open('secret', 'r').read()
 headers = {'Authorization': 'Bearer ' + secret}
 
-response = requests.post(url, files=files, headers=headers)
+def upload(file_name, path):
+    url = 'http://localhost:8080/upload'
+    files = {'file': (file_name, open(path, 'rb'))}
+
+    return requests.post(url, files=files, headers=headers)
+
+response = upload("hello.md", "test.md")
 
 if response.status_code == 200:
     print('Request succeeded!')
