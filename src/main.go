@@ -1,17 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"encoding/base64"
 	"mime"
 	"net/http"
 	"regexp"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/parser"
 
 	"go-blogger/src/database"
-	secret "go-blogger/src/secret"
+	"go-blogger/src/secret"
 )
 
 var secret_key string
@@ -81,14 +79,51 @@ func main() {
 			return
 		}
 
-		p := parser.NewWithExtensions(parser.CommonExtensions | parser.HardLineBreak)
-		html := markdown.ToHTML(data, p, nil)
-		println(string(html))
-
 		hash := database.StoreFile(name, data)
-		fmt.Printf("Hash: %x\n", hash)
+		resp := base64.StdEncoding.EncodeToString(hash)
 
-		c.String(http.StatusOK, "File uploaded and stored successfully")
+		c.JSON(http.StatusOK, gin.H{
+			"hash": resp,
+		})
+	})
+
+	r.POST("/create_blog", func(c *gin.Context) {
+		incoming_secret := c.GetHeader("Authorization")
+		if incoming_secret != "Bearer "+secret_key {
+			c.String(http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
+		var json struct {
+			Title      string   `json:"title" binding:"required"`
+			PageHash   string   `json:"page_hash" binding:"required"`
+			FileHashes []string `json:"file_hashes" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&json); err != nil {
+			c.String(http.StatusBadRequest, "Bad request")
+			return
+		}
+
+		println("Creating blog with title ", json.Title)
+
+		page_hash, err := base64.StdEncoding.DecodeString(json.PageHash)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Bad request")
+			return
+		}
+
+		var hashes [][]byte
+		for _, hash := range json.FileHashes {
+			hash_bytes, err := base64.StdEncoding.DecodeString(hash)
+			if err != nil {
+				c.String(http.StatusBadRequest, "Bad request")
+				return
+			}
+			hashes = append(hashes, hash_bytes)
+		}
+
+		database.CreateBlog(json.Title, page_hash, hashes)
 	})
 
 	r.Run("127.0.0.1:8080") // Run the server

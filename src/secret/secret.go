@@ -1,8 +1,8 @@
 package secret
 
 import (
-	"crypto/rand"
 	"encoding/base64"
+	"go-blogger/src/genrandom"
 	"log"
 	"os"
 )
@@ -10,13 +10,7 @@ import (
 const secretFilePath = "secret"
 
 func generateSecret() string {
-	randomBytes := make([]byte, 64)
-
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	randomBytes := genrandom.GenerateRandomBytes(64)
 	secret := base64.StdEncoding.EncodeToString(randomBytes)
 	return secret
 }
