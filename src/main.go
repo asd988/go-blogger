@@ -2,17 +2,35 @@ package main
 
 import (
 	"encoding/base64"
+	"html/template"
 	"mime"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/parser"
 
 	"go-blogger/src/database"
 	"go-blogger/src/secret"
 )
 
 var secretKey string
+
+func slugify(title string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(title)
+
+	// Remove non-alphanumeric and non-hyphen characters
+	reg := regexp.MustCompile("[^a-z0-9-]+")
+	slug = reg.ReplaceAllString(slug, "-")
+
+	// Remove any leading or trailing hyphens
+	slug = strings.Trim(slug, "-")
+
+	return slug
+}
 
 func main() {
 	database.InitDB()
@@ -28,12 +46,6 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "Go Web App",
-		})
-	})
-	r.GET("/blog", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "blog.html", gin.H{
-			"title":       "Go Web App",
-			"BlogContent": "template.HTML(string(html))",
 		})
 	})
 
@@ -123,7 +135,39 @@ func main() {
 			hashes = append(hashes, hashBytes)
 		}
 
-		database.CreateBlog(json.Title, pageHash, hashes)
+		id := database.CreateBlog(json.Title, pageHash, hashes)
+
+		c.JSON(http.StatusOK, gin.H{
+			"blog_id": id,
+		})
+	})
+
+	r.GET("/blog/:blog_id", func(c *gin.Context) {
+		blogID := c.Param("blog_id")
+		title := slugify(database.GetBlogTitle(blogID))
+
+		c.Redirect(http.StatusMovedPermanently, "/blog/"+blogID+"/"+title)
+	})
+
+	r.GET("/blog/:blog_id/:title", func(c *gin.Context) {
+		blogID := c.Param("blog_id")
+		title := c.Param("title")
+		realTitle := slugify(database.GetBlogTitle(blogID))
+
+		if title != realTitle {
+			c.String(http.StatusNotFound, "Blog not found")
+			return
+		}
+
+		data := database.GetBlogContent(blogID)
+		p := parser.NewWithExtensions(parser.CommonExtensions | parser.HardLineBreak)
+		html := markdown.ToHTML(data, p, nil)
+
+		c.HTML(http.StatusOK, "blog.html", gin.H{
+			"title":       "Go Web App",
+			"BlogTitle":   title,
+			"BlogContent": template.HTML(string(html)),
+		})
 	})
 
 	r.Run("127.0.0.1:8080") // Run the server

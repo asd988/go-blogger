@@ -129,3 +129,55 @@ func CreateBlog(title string, pageFileHash []byte, otherFileHashes [][]byte) str
 
 	return id
 }
+
+func GetBlogTitle(id string) string {
+	var title string
+	err := db.QueryRow("SELECT title FROM blogs WHERE id = ?", id).Scan(&title)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ""
+		}
+		log.Fatal(err)
+	}
+
+	return title
+}
+
+func GetFileContent(hash []byte) []byte {
+	var data []byte
+	err := db.QueryRow("SELECT data FROM file WHERE hash = ?", hash).Scan(&data)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Fatal(err)
+	}
+
+	return data
+}
+
+func GetSnapshotContent(id []byte) []byte {
+	var pageFileHash []byte
+	err := db.QueryRow("SELECT page_file FROM snapshot WHERE snapshot_id = ?", id).Scan(&pageFileHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Fatal(err)
+	}
+
+	return GetFileContent(pageFileHash)
+}
+
+func GetBlogContent(id string) []byte {
+	var snapshotId []byte
+	err := db.QueryRow("SELECT snapshot_id FROM blogs WHERE id = ?", id).Scan(&snapshotId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Fatal(err)
+	}
+
+	return GetSnapshotContent(snapshotId)
+}
