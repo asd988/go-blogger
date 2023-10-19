@@ -35,13 +35,19 @@ func handleFile(c *gin.Context) {
 	c.Data(http.StatusOK, mime.TypeByExtension(extension), fileData)
 }
 
-func handleUpload(c *gin.Context) {
-	incomingSecret := c.GetHeader("Authorization")
-	if incomingSecret != "Bearer "+secretKey {
-		c.String(http.StatusUnauthorized, "Unauthorized")
-		return
+func needsAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		incomingSecret := c.GetHeader("Authorization")
+		if incomingSecret != "Bearer "+secretKey {
+			c.String(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
+}
 
+func handleUpload(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		c.String(http.StatusBadRequest, "Bad request")
@@ -69,12 +75,6 @@ func handleUpload(c *gin.Context) {
 }
 
 func handleCreateBlog(c *gin.Context) {
-	incomingSecret := c.GetHeader("Authorization")
-	if incomingSecret != "Bearer "+secretKey {
-		c.String(http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
 	var json struct {
 		Title      string   `json:"title" binding:"required"`
 		PageHash   string   `json:"page_hash" binding:"required"`
@@ -114,7 +114,7 @@ func handleCreateBlog(c *gin.Context) {
 func handleBlog(c *gin.Context) {
 	blogID := c.Param("blog_id")
 	title := c.Param("title")
-	realTitle := utils.Slugify(database.GetBlogTitle(blogID))
+	realTitle := utils.Slugify(c.GetString("blog_title"))
 
 	if title != realTitle {
 		c.String(http.StatusNotFound, "Blog not found")
@@ -132,9 +132,24 @@ func handleBlog(c *gin.Context) {
 	})
 }
 
+func blogExists() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		blogID := c.Param("blog_id")
+		title := database.GetBlogTitle(blogID)
+
+		if title == "" {
+			c.String(http.StatusNotFound, "Blog not found")
+			c.Abort()
+			return
+		}
+		c.Set("blog_title", title)
+		c.Next()
+	}
+}
+
 func handleBlogRedirect(c *gin.Context) {
 	blogID := c.Param("blog_id")
-	title := utils.Slugify(database.GetBlogTitle(blogID))
+	title := utils.Slugify(c.GetString("blog_title"))
 
 	c.Redirect(http.StatusMovedPermanently, "/blog/"+blogID+"/"+title)
 }

@@ -6,10 +6,10 @@ import (
 
 func setupRoutes(r *gin.Engine) {
 	r.GET("/", handleIndex)
-	r.GET("/blog/:blog_id", handleBlogRedirect)
-	r.GET("/blog/:blog_id/:title", handleBlog)
+	r.GET("/blog/:blog_id", blogExists(), handleBlogRedirect)
+	r.GET("/blog/:blog_id/:title", blogExists(), handleBlog)
 	r.GET("/file/:file_name", handleFile)
 
-	r.POST("/upload", handleUpload)
-	r.POST("/create_blog", handleCreateBlog)
+	r.POST("/upload", needsAuth(), handleUpload)
+	r.POST("/create_blog", needsAuth(), handleCreateBlog)
 }
