@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"mime"
 	"net/http"
+	"regexp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gomarkdown/markdown"
@@ -35,6 +37,23 @@ func main() {
 			"title":       "Go Web App",
 			"BlogContent": "template.HTML(string(html))",
 		})
+	})
+
+	r.GET("/file/:file_name", func(c *gin.Context) {
+		// Get the file name parameter from the URL
+		fileName := c.Param("file_name")
+
+		// Use the GetFile function to retrieve the file data
+		fileData := database.GetFileByName(fileName)
+
+		if len(fileData) == 0 {
+			c.String(http.StatusNotFound, "File not found")
+			return
+		}
+
+		// Set the appropriate response headers
+		// c.Header("Content-Disposition", "attachment; filename="+fileName)
+		c.Data(http.StatusOK, mime.TypeByExtension(regexp.MustCompile(`\.[a-zA-Z0-9]+$`).FindString(fileName)), fileData)
 	})
 
 	r.POST("/upload", func(c *gin.Context) {

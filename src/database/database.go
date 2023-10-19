@@ -76,3 +76,16 @@ func StoreFile(name string, data []byte) []byte {
 
 	return hash
 }
+
+func GetFileByName(name string) []byte {
+	var data []byte
+	err := db.QueryRow("SELECT data FROM file WHERE name = ? LIMIT 1", name).Scan(&data)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Fatal(err)
+	}
+
+	return data
+}
