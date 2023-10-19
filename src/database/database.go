@@ -169,7 +169,7 @@ func GetSnapshotContent(id []byte) []byte {
 	return GetFileContent(pageFileHash)
 }
 
-func GetBlogContent(id string) []byte {
+func GetBlogSnapshotId(id string) []byte {
 	var snapshotId []byte
 	err := db.QueryRow("SELECT snapshot_id FROM blogs WHERE id = ?", id).Scan(&snapshotId)
 	if err != nil {
@@ -179,5 +179,51 @@ func GetBlogContent(id string) []byte {
 		log.Fatal(err)
 	}
 
+	return snapshotId
+}
+
+func GetBlogContent(id string) []byte {
+	snapshotId := GetBlogSnapshotId(id)
+
 	return GetSnapshotContent(snapshotId)
+}
+
+func GetSnapshotFileNames(id []byte) []string {
+	var fileNames []string
+	rows, err := db.Query("SELECT file_id FROM snapshot_file WHERE snapshot_id = ?", id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var hash []byte
+		err := rows.Scan(&hash)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var name string
+		err = db.QueryRow("SELECT name FROM file WHERE hash = ?", hash).Scan(&name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fileNames = append(fileNames, name)
+	}
+
+	return fileNames
+}
+
+func GetSnapshotFileByName(snapshot_id []byte, file_name string) []byte {
+	var data []byte
+	err := db.QueryRow("SELECT file.data FROM file INNER JOIN snapshot_file ON file.hash = snapshot_file.file_id WHERE snapshot_file.snapshot_id = ? AND file.name = ?", snapshot_id, file_name).Scan(&data)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Fatal(err)
+	}
+
+	return data
 }

@@ -15,8 +15,10 @@ def create_blog(title, page_hash, file_hashes = []):
     return requests.post(url, json=data, headers=headers)
 
 response = upload("go.png", "gopher.png")
-#response = create_blog("My Favourite Dish", response.json().get("hash"))
-
+png_hash = response.json().get("hash")
+response = upload("dish.md", "test.md")
+md_hash = response.json().get("hash")
+response = create_blog("My Favourite Dish", md_hash, [png_hash])
 
 if response.status_code == 200:
     print('Request succeeded!')

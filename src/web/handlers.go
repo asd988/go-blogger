@@ -20,6 +20,12 @@ func handleIndex(c *gin.Context) {
 	})
 }
 
+func respondWithFile(c *gin.Context, fileName string, data []byte) {
+	// Set the appropriate response headers
+	extension := regexp.MustCompile(`\.[a-zA-Z0-9]+$`).FindString(fileName)
+	c.Data(http.StatusOK, mime.TypeByExtension(extension), data)
+}
+
 func handleFile(c *gin.Context) {
 	fileName := c.Param("file_name")
 
@@ -30,9 +36,7 @@ func handleFile(c *gin.Context) {
 		return
 	}
 
-	// Set the appropriate response headers
-	extension := regexp.MustCompile(`\.[a-zA-Z0-9]+$`).FindString(fileName)
-	c.Data(http.StatusOK, mime.TypeByExtension(extension), fileData)
+	respondWithFile(c, fileName, fileData)
 }
 
 func needsAuth() gin.HandlerFunc {
@@ -114,22 +118,35 @@ func handleCreateBlog(c *gin.Context) {
 func handleBlog(c *gin.Context) {
 	blogID := c.Param("blog_id")
 	title := c.Param("title")
-	realTitle := utils.Slugify(c.GetString("blog_title"))
+	realTitle := c.GetString("blog_title")
 
-	if title != realTitle {
-		c.String(http.StatusNotFound, "Blog not found")
+	if title == utils.Slugify(realTitle) {
+		data := database.GetBlogContent(blogID)
+		p := parser.NewWithExtensions(parser.CommonExtensions | parser.HardLineBreak)
+		html := markdown.ToHTML(data, p, nil)
+
+		c.HTML(http.StatusOK, "blog.html", gin.H{
+			"title":       "Go Web App",
+			"BlogTitle":   title,
+			"BlogContent": template.HTML(string(html)),
+		})
 		return
+	} else {
+		snapshot_id := database.GetBlogSnapshotId(blogID)
+		file_names := database.GetSnapshotFileNames(snapshot_id)
+		// if title is in file_names
+		for _, file_name := range file_names {
+			println("file_name: ", file_name)
+			if title == file_name {
+				data := database.GetSnapshotFileByName(snapshot_id, file_name)
+				respondWithFile(c, file_name, data)
+				return
+			}
+		}
 	}
 
-	data := database.GetBlogContent(blogID)
-	p := parser.NewWithExtensions(parser.CommonExtensions | parser.HardLineBreak)
-	html := markdown.ToHTML(data, p, nil)
+	c.String(http.StatusNotFound, "Blog not found")
 
-	c.HTML(http.StatusOK, "blog.html", gin.H{
-		"title":       "Go Web App",
-		"BlogTitle":   title,
-		"BlogContent": template.HTML(string(html)),
-	})
 }
 
 func blogExists() gin.HandlerFunc {

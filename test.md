@@ -6,7 +6,7 @@ amogus
  - asdf
  - muu
 
-![Go's mascot is the gopher. The gopher has no name.](./gopher.png)
+![Go's mascot is the gopher. The gopher has no name.](./go.png)
 
 ```go
 func getTrue() bool {
