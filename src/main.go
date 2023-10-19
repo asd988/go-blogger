@@ -10,10 +10,14 @@ import (
 	"github.com/gomarkdown/markdown/parser"
 
 	"go-blogger/src/database"
+	secret "go-blogger/src/secret"
 )
+
+var secret_key string
 
 func main() {
 	database.InitDB()
+	secret_key = secret.GetSecret()
 
 	md, err := os.ReadFile("test.md")
 	if err != nil {
