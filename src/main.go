@@ -8,9 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+
+	"go-blogger/src/database"
 )
 
 func main() {
+	database.InitDB()
+
 	md, err := os.ReadFile("test.md")
 	if err != nil {
 		panic(err)
