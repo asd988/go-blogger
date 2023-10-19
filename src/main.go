@@ -12,11 +12,11 @@ import (
 	"go-blogger/src/secret"
 )
 
-var secret_key string
+var secretKey string
 
 func main() {
 	database.InitDB()
-	secret_key = secret.GetSecret()
+	secretKey = secret.GetSecret()
 
 	r := gin.Default()
 
@@ -55,8 +55,8 @@ func main() {
 	})
 
 	r.POST("/upload", func(c *gin.Context) {
-		incoming_secret := c.GetHeader("Authorization")
-		if incoming_secret != "Bearer "+secret_key {
+		incomingSecret := c.GetHeader("Authorization")
+		if incomingSecret != "Bearer "+secretKey {
 			c.String(http.StatusUnauthorized, "Unauthorized")
 			return
 		}
@@ -88,8 +88,8 @@ func main() {
 	})
 
 	r.POST("/create_blog", func(c *gin.Context) {
-		incoming_secret := c.GetHeader("Authorization")
-		if incoming_secret != "Bearer "+secret_key {
+		incomingSecret := c.GetHeader("Authorization")
+		if incomingSecret != "Bearer "+secretKey {
 			c.String(http.StatusUnauthorized, "Unauthorized")
 			return
 		}
@@ -107,7 +107,7 @@ func main() {
 
 		println("Creating blog with title ", json.Title)
 
-		page_hash, err := base64.StdEncoding.DecodeString(json.PageHash)
+		pageHash, err := base64.StdEncoding.DecodeString(json.PageHash)
 		if err != nil {
 			c.String(http.StatusBadRequest, "Bad request")
 			return
@@ -115,15 +115,15 @@ func main() {
 
 		var hashes [][]byte
 		for _, hash := range json.FileHashes {
-			hash_bytes, err := base64.StdEncoding.DecodeString(hash)
+			hashBytes, err := base64.StdEncoding.DecodeString(hash)
 			if err != nil {
 				c.String(http.StatusBadRequest, "Bad request")
 				return
 			}
-			hashes = append(hashes, hash_bytes)
+			hashes = append(hashes, hashBytes)
 		}
 
-		database.CreateBlog(json.Title, page_hash, hashes)
+		database.CreateBlog(json.Title, pageHash, hashes)
 	})
 
 	r.Run("127.0.0.1:8080") // Run the server

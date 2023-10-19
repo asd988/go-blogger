@@ -92,16 +92,16 @@ func GetFileByName(name string) []byte {
 	return data
 }
 
-func CreateSnapshot(blog_id string, page_file_hash []byte, other_files_hash [][]byte) []byte {
+func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte) []byte {
 	time := time.Now()
 	id := genrandom.GenerateRandomBytes(8)
 
-	_, err := db.Exec("INSERT INTO snapshot(snapshot_id, page_file, creation_date, blog_id) VALUES(?, ?, ?, ?)", id, page_file_hash, time, blog_id)
+	_, err := db.Exec("INSERT INTO snapshot(snapshot_id, page_file, creation_date, blog_id) VALUES(?, ?, ?, ?)", id, pageFileHash, time, blogId)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, hash := range append(other_files_hash, page_file_hash) {
+	for _, hash := range append(otherFileHashes, pageFileHash) {
 		_, err := db.Exec("INSERT INTO snapshot_file(snapshot_id, file_id) VALUES(?, ?)", id, hash)
 		if err != nil {
 			log.Fatal(err)
@@ -111,7 +111,7 @@ func CreateSnapshot(blog_id string, page_file_hash []byte, other_files_hash [][]
 	return id
 }
 
-func CreateBlog(title string, page_file_hash []byte, other_files_hash [][]byte) string {
+func CreateBlog(title string, pageFileHash []byte, otherFileHashes [][]byte) string {
 	time := time.Now()
 	id := genrandom.GenerateRandomString(6)
 
@@ -120,9 +120,9 @@ func CreateBlog(title string, page_file_hash []byte, other_files_hash [][]byte) 
 		log.Fatal(err)
 	}
 
-	snapshot_id := CreateSnapshot(id, page_file_hash, other_files_hash)
+	snapshotId := CreateSnapshot(id, pageFileHash, otherFileHashes)
 
-	_, err = db.Exec("UPDATE blogs SET snapshot_id = ? WHERE id = ?", snapshot_id, id)
+	_, err = db.Exec("UPDATE blogs SET snapshot_id = ? WHERE id = ?", snapshotId, id)
 	if err != nil {
 		log.Fatal(err)
 	}
