@@ -198,12 +198,6 @@ func GetBlogSnapshotId(id string) SnapshotId {
 	return SnapshotId{text, id}
 }
 
-func GetBlogContent(id string) []byte {
-	snapshotId := GetBlogSnapshotId(id)
-
-	return GetSnapshotContent(snapshotId)
-}
-
 type FileSummary struct {
 	Name string
 	Hash []byte

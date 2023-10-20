@@ -38,13 +38,16 @@ func handleFile(c *gin.Context) {
 	respondWithFile(c, fileName, fileData)
 }
 
-func handleBlog(c *gin.Context) {
-	blogID := c.Param("blog_id")
-	title := c.Param("title")
+func blog(c *gin.Context, title string, snapshotId database.SnapshotId) {
 	realTitle := c.GetString("blog_title")
 
 	if title == utils.Slugify(realTitle) {
-		data := database.GetBlogContent(blogID)
+		data := database.GetSnapshotContent(snapshotId)
+		if len(data) == 0 {
+			c.String(http.StatusNotFound, "Blog not found")
+			return
+		}
+
 		p := parser.NewWithExtensions(parser.CommonExtensions | parser.HardLineBreak)
 		html := markdown.ToHTML(data, p, nil)
 
@@ -55,8 +58,7 @@ func handleBlog(c *gin.Context) {
 		})
 		return
 	} else {
-		snapshot_id := database.GetBlogSnapshotId(blogID)
-		files := database.GetSnapshotFiles(snapshot_id)
+		files := database.GetSnapshotFiles(snapshotId)
 		// if title is in file_names
 		for _, file := range files {
 			if title == file.Name {
@@ -68,6 +70,20 @@ func handleBlog(c *gin.Context) {
 	}
 
 	c.String(http.StatusNotFound, "Blog not found")
+}
+
+func handleBlog(c *gin.Context) {
+	blogID := c.Param("blog_id")
+	title := c.Param("first")
+	snapshotId := database.GetBlogSnapshotId(blogID)
+	blog(c, title, snapshotId)
+}
+
+func handleSnapshotBlog(c *gin.Context) {
+	blogID := c.Param("blog_id")
+	snapshotId := c.Param("first")
+	title := c.Param("second")
+	blog(c, title, database.SnapshotId{Text: snapshotId, BlogId: blogID})
 }
 
 func blogExists() gin.HandlerFunc {

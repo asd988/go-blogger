@@ -10,7 +10,8 @@ func setupRoutes(r *gin.Engine) {
 
 	r.GET("/blog_list", handleBlogList)
 	r.GET("/blog/:blog_id", blogExists(), handleBlogRedirect)
-	r.GET("/blog/:blog_id/:title", blogExists(), handleBlog)
+	r.GET("/blog/:blog_id/:first", blogExists(), handleBlog)
+	r.GET("/blog/:blog_id/:first/:second", blogExists(), handleSnapshotBlog)
 
 	r.POST("/upload", needsAuth(), handleUpload)
 	r.POST("/create_blog", needsAuth(), handleCreateBlog)
