@@ -26,14 +26,15 @@ func InitDB() {
 		id TEXT PRIMARY KEY,
 		title TEXT,
 		publish_date DATETIME,
-		snapshot_id BLOB,
+		snapshot_id TEXT,
 		FOREIGN KEY (snapshot_id) REFERENCES snapshot(snapshot_id)
 	);
 	CREATE TABLE IF NOT EXISTS snapshot (
-		snapshot_id BLOB PRIMARY KEY,
+		snapshot_id TEXT,
 		page_file BLOB,
 		creation_date DATETIME,
 		blog_id TEXT,
+		PRIMARY KEY (snapshot_id, blog_id),
 		FOREIGN KEY (blog_id) REFERENCES blogs(id),
 		FOREIGN KEY (page_file) REFERENCES file(hash)
 	);
@@ -43,9 +44,11 @@ func InitDB() {
 		data BLOB
 	);	
 	CREATE TABLE IF NOT EXISTS snapshot_file (
-		snapshot_id BLOB,
+		snapshot_id TEXT,
+		blog_id TEXT,
 		file_id BLOB,
 		FOREIGN KEY (snapshot_id) REFERENCES snapshot(snapshot_id),
+		FOREIGN KEY (blog_id) REFERENCES blogs(id),
 		FOREIGN KEY (file_id) REFERENCES file(hash)
 	);	
     `
@@ -53,6 +56,14 @@ func InitDB() {
 	_, err = db.Exec(createTables)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func createSnapshotId(prev time.Time, current time.Time) string {
+	if prev.Format("2006-01-02") != current.Format("2006-01-02") {
+		return current.Format("2006-01-02")
+	} else {
+		return current.Format("2006-01-02-") + utils.GenerateRandomString(4)
 	}
 }
 
@@ -92,9 +103,14 @@ func GetFileByName(name string) []byte {
 	return data
 }
 
-func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte) []byte {
+type SnapshotId struct {
+	Text   string
+	BlogId string
+}
+
+func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte) string {
 	time := time.Now()
-	id := utils.GenerateRandomBytes(8)
+	id := time.Format("2006-01-02")
 
 	_, err := db.Exec("INSERT INTO snapshot(snapshot_id, page_file, creation_date, blog_id) VALUES(?, ?, ?, ?)", id, pageFileHash, time, blogId)
 	if err != nil {
@@ -102,7 +118,7 @@ func CreateSnapshot(blogId string, pageFileHash []byte, otherFileHashes [][]byte
 	}
 
 	for _, hash := range append(otherFileHashes, pageFileHash) {
-		_, err := db.Exec("INSERT INTO snapshot_file(snapshot_id, file_id) VALUES(?, ?)", id, hash)
+		_, err := db.Exec("INSERT INTO snapshot_file(snapshot_id, blog_id, file_id) VALUES(?, ?, ?)", id, blogId, hash)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -156,9 +172,9 @@ func GetFileContent(hash []byte) []byte {
 	return data
 }
 
-func GetSnapshotContent(id []byte) []byte {
+func GetSnapshotContent(id SnapshotId) []byte {
 	var pageFileHash []byte
-	err := db.QueryRow("SELECT page_file FROM snapshot WHERE snapshot_id = ?", id).Scan(&pageFileHash)
+	err := db.QueryRow("SELECT page_file FROM snapshot WHERE snapshot_id = ? AND blog_id = ?", id.Text, id.BlogId).Scan(&pageFileHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
@@ -169,17 +185,17 @@ func GetSnapshotContent(id []byte) []byte {
 	return GetFileContent(pageFileHash)
 }
 
-func GetBlogSnapshotId(id string) []byte {
-	var snapshotId []byte
-	err := db.QueryRow("SELECT snapshot_id FROM blogs WHERE id = ?", id).Scan(&snapshotId)
+func GetBlogSnapshotId(id string) SnapshotId {
+	var text string
+	err := db.QueryRow("SELECT snapshot_id FROM blogs WHERE id = ?", id).Scan(&text)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			return SnapshotId{"", ""}
 		}
 		log.Fatal(err)
 	}
 
-	return snapshotId
+	return SnapshotId{text, id}
 }
 
 func GetBlogContent(id string) []byte {
@@ -193,9 +209,9 @@ type FileSummary struct {
 	Hash []byte
 }
 
-func GetSnapshotFiles(id []byte) []FileSummary {
+func GetSnapshotFiles(id SnapshotId) []FileSummary {
 	var files []FileSummary
-	rows, err := db.Query("SELECT file.name, file.hash FROM file INNER JOIN snapshot_file ON file.hash = snapshot_file.file_id WHERE snapshot_file.snapshot_id = ?", id)
+	rows, err := db.Query("SELECT file.name, file.hash FROM file INNER JOIN snapshot_file ON file.hash = snapshot_file.file_id WHERE snapshot_file.snapshot_id = ? AND snapshot_file.blog_id = ?", id.Text, id.BlogId)
 	if err != nil {
 		log.Fatal(err)
 	}
