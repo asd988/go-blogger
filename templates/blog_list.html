@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Go Web App</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+<body>
+    Blog List:
+    <ul>
+        {{range .Blogs}}
+        <li><a href="/blog/{{.Id}}">{{.Title}}</a></li>
+        {{end}}
+</body>
+</html>

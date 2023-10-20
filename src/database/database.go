@@ -227,3 +227,33 @@ func GetSnapshotFileByName(snapshot_id []byte, file_name string) []byte {
 
 	return data
 }
+
+type Blog struct {
+	Title       string
+	Id          string
+	PublishDate time.Time
+}
+
+func GetBlogs(index int, amount int) []Blog {
+	var blogs []Blog
+
+	rows, err := db.Query("SELECT title, id, publish_date FROM blogs ORDER BY publish_date DESC LIMIT ? OFFSET ?", amount, index)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var title string
+		var id string
+		var publishDate time.Time
+		err := rows.Scan(&title, &id, &publishDate)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		blogs = append(blogs, Blog{title, id, publishDate})
+	}
+
+	return blogs
+}

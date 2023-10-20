@@ -146,7 +146,6 @@ func handleBlog(c *gin.Context) {
 	}
 
 	c.String(http.StatusNotFound, "Blog not found")
-
 }
 
 func blogExists() gin.HandlerFunc {
@@ -169,4 +168,16 @@ func handleBlogRedirect(c *gin.Context) {
 	title := utils.Slugify(c.GetString("blog_title"))
 
 	c.Redirect(http.StatusMovedPermanently, "/blog/"+blogID+"/"+title)
+}
+
+func handleBlogList(c *gin.Context) {
+	blogs := database.GetBlogs(0, 10)
+	for _, blog := range blogs {
+		println("title: ", blog.Title)
+	}
+
+	c.HTML(http.StatusOK, "blog_list.html", gin.H{
+		"title": "Go Web App",
+		"Blogs": blogs,
+	})
 }
