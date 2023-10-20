@@ -1,11 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather&family=Poppins&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather&family=Noto+Sans&display=swap');
 
 :root {
     --text: #dddddd;
     --background: #333;
-    --blog-font: 'Poppins', serif;
+    --blog-font: 'Noto Sans', sans-serif;
 }
-/* sans-serif: Poppins */
+/* serif: Merriweather */
+/* sans-serif: Poppins, */
 
 body {
     background-color: var(--background);
