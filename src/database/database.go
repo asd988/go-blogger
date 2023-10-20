@@ -188,44 +188,31 @@ func GetBlogContent(id string) []byte {
 	return GetSnapshotContent(snapshotId)
 }
 
-func GetSnapshotFileNames(id []byte) []string {
-	var fileNames []string
-	rows, err := db.Query("SELECT file_id FROM snapshot_file WHERE snapshot_id = ?", id)
+type FileSummary struct {
+	Name string
+	Hash []byte
+}
+
+func GetSnapshotFiles(id []byte) []FileSummary {
+	var files []FileSummary
+	rows, err := db.Query("SELECT file.name, file.hash FROM file INNER JOIN snapshot_file ON file.hash = snapshot_file.file_id WHERE snapshot_file.snapshot_id = ?", id)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var hash []byte
-		err := rows.Scan(&hash)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		var name string
-		err = db.QueryRow("SELECT name FROM file WHERE hash = ?", hash).Scan(&name)
+		var hash []byte
+		err := rows.Scan(&name, &hash)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fileNames = append(fileNames, name)
+		files = append(files, FileSummary{name, hash})
 	}
 
-	return fileNames
-}
-
-func GetSnapshotFileByName(snapshot_id []byte, file_name string) []byte {
-	var data []byte
-	err := db.QueryRow("SELECT file.data FROM file INNER JOIN snapshot_file ON file.hash = snapshot_file.file_id WHERE snapshot_file.snapshot_id = ? AND file.name = ?", snapshot_id, file_name).Scan(&data)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		log.Fatal(err)
-	}
-
-	return data
+	return files
 }
 
 type Blog struct {
@@ -256,4 +243,18 @@ func GetBlogs(index int, amount int) []Blog {
 	}
 
 	return blogs
+}
+
+func GetFile(hash []byte) (string, []byte) {
+	var name string
+	var data []byte
+	err := db.QueryRow("SELECT name, data FROM file WHERE hash = ?", hash).Scan(&name, &data)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		log.Fatal(err)
+	}
+
+	return name, data
 }

@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/base64"
 	"go-blogger/src/database"
 	"go-blogger/src/utils"
 	"html/template"
@@ -39,82 +38,6 @@ func handleFile(c *gin.Context) {
 	respondWithFile(c, fileName, fileData)
 }
 
-func needsAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		incomingSecret := c.GetHeader("Authorization")
-		if incomingSecret != "Bearer "+secretKey {
-			c.String(http.StatusUnauthorized, "Unauthorized")
-			c.Abort()
-			return
-		}
-		c.Next()
-	}
-}
-
-func handleUpload(c *gin.Context) {
-	file, header, err := c.Request.FormFile("file")
-	if err != nil {
-		c.String(http.StatusBadRequest, "Bad request")
-		return
-	}
-	defer file.Close()
-
-	name := header.Filename
-	println("Name ", name)
-
-	// Read the file data into a byte slice
-	data := make([]byte, header.Size)
-	_, err = file.Read(data)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Error reading the file")
-		return
-	}
-
-	hash := database.StoreFile(name, data)
-	resp := base64.StdEncoding.EncodeToString(hash)
-
-	c.JSON(http.StatusOK, gin.H{
-		"hash": resp,
-	})
-}
-
-func handleCreateBlog(c *gin.Context) {
-	var json struct {
-		Title      string   `json:"title" binding:"required"`
-		PageHash   string   `json:"page_hash" binding:"required"`
-		FileHashes []string `json:"file_hashes" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&json); err != nil {
-		c.String(http.StatusBadRequest, "Bad request")
-		return
-	}
-
-	println("Creating blog with title ", json.Title)
-
-	pageHash, err := base64.StdEncoding.DecodeString(json.PageHash)
-	if err != nil {
-		c.String(http.StatusBadRequest, "Bad request")
-		return
-	}
-
-	var hashes [][]byte
-	for _, hash := range json.FileHashes {
-		hashBytes, err := base64.StdEncoding.DecodeString(hash)
-		if err != nil {
-			c.String(http.StatusBadRequest, "Bad request")
-			return
-		}
-		hashes = append(hashes, hashBytes)
-	}
-
-	id := database.CreateBlog(json.Title, pageHash, hashes)
-
-	c.JSON(http.StatusOK, gin.H{
-		"blog_id": id,
-	})
-}
-
 func handleBlog(c *gin.Context) {
 	blogID := c.Param("blog_id")
 	title := c.Param("title")
@@ -133,13 +56,12 @@ func handleBlog(c *gin.Context) {
 		return
 	} else {
 		snapshot_id := database.GetBlogSnapshotId(blogID)
-		file_names := database.GetSnapshotFileNames(snapshot_id)
+		files := database.GetSnapshotFiles(snapshot_id)
 		// if title is in file_names
-		for _, file_name := range file_names {
-			println("file_name: ", file_name)
-			if title == file_name {
-				data := database.GetSnapshotFileByName(snapshot_id, file_name)
-				respondWithFile(c, file_name, data)
+		for _, file := range files {
+			if title == file.Name {
+				_, data := database.GetFile(file.Hash)
+				respondWithFile(c, file.Name, data)
 				return
 			}
 		}

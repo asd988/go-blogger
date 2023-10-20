@@ -14,4 +14,6 @@ func setupRoutes(r *gin.Engine) {
 
 	r.POST("/upload", needsAuth(), handleUpload)
 	r.POST("/create_blog", needsAuth(), handleCreateBlog)
+	r.POST("/get_file_hashes", needsAuth(), handleGetFileHashes)
+	r.POST("/download", needsAuth(), handleDownload)
 }
